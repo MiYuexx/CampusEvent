@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusEvent 校园活动报名与管理系统</title>
+  <style>
+    body { font-family: -apple-system, "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #1f2329; }
+    header { background: #2b579a; color: #fff; padding: 16px 24px; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    section { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    h2 { margin-top: 0; font-size: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border-bottom: 1px solid #e5e6eb; padding: 8px 10px; font-size: 14px; text-align: left; }
+    input, select, button { padding: 7px 10px; font-size: 14px; border: 1px solid #d0d3d9; border-radius: 6px; }
+    button { background: #2b579a; color: #fff; border: none; cursor: pointer; margin-right: 6px; }
+    button.secondary { background: #6b7280; }
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .tag { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .pending { background: #fff7e6; color: #d46b08; }
+    .approved { background: #e6f7ec; color: #16773a; }
+    .rejected, .cancelled { background: #f2f3f5; color: #646a73; }
+    .msg { color: #646a73; font-size: 13px; line-height: 1.8; }
+    .tip { font-size: 12px; color: #8a9099; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<header><h1>CampusEvent 校园活动报名与管理系统（演示页）</h1></header>
+<main>
+  <section>
+    <h2>新建活动（管理员）</h2>
+    <div class="form-row">
+      <input id="title" placeholder="活动名称">
+      <input id="category" placeholder="类别">
+      <input id="location" placeholder="地点">
+      <input id="capacity" type="number" placeholder="人数上限" min="1">
+      <select id="policy_type">
+        <option value="DIRECT">直接报名</option>
+        <option value="REVIEW">管理员审核</option>
+      </select>
+      <button onclick="createActivity()">创建活动</button>
+    </div>
+    <div class="tip">本页面为 GitHub Pages 静态演示，数据保存在浏览器本地；后端 Flask 源码与完整验收测试见仓库 app/ 与 tests/ 目录。</div>
+  </section>
+
+  <section>
+    <h2>活动列表</h2>
+    <div class="form-row">
+      <input id="keyword" placeholder="按名称筛选">
+      <button onclick="render()">查询</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>方式</th><th>地点</th><th>已通过</th><th>待审核</th><th>剩余名额</th><th>操作</th></tr></thead>
+      <tbody id="activityBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>报名 / 审批操作</h2>
+    <div class="form-row">
+      <input id="studentId" placeholder="学生ID，如 s001">
+      <button onclick="registerSelected()">报名选中活动</button>
+      <button class="secondary" onclick="loadMessages()">查看我的站内消息</button>
+    </div>
+    <table>
+      <thead><tr><th>报名ID</th><th>活动ID</th><th>学生</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="registrationBody"></tbody>
+    </table>
+    <div id="messageBox" class="msg"></div>
+  </section>
+</main>
+
+<script>
+let seq = 100;
+let activities = [
+  { activity_id: 1, title: "迎新晚会", category: "文艺", location: "大礼堂", capacity: 2, policy_type: "DIRECT" },
+  { activity_id: 2, title: "志愿者招募", category: "公益", location: "学生活动中心", capacity: 3, policy_type: "REVIEW" }
+];
+let registrations = [];
+let messages = [];
+let selectedActivity = null;
+
+function approvedCount(aid) {
+  return registrations.filter(r => r.activity_id === aid && r.status === "APPROVED").length;
+}
+function pendingCount(aid) {
+  return registrations.filter(r => r.activity_id === aid && r.status === "PENDING").length;
+}
+function hasActive(aid, sid) {
+  return registrations.some(r => r.activity_id === aid && r.student_id === sid && ["PENDING", "APPROVED"].includes(r.status));
+}
+function pushMessage(sid, aid, content) {
+  if (!messages.some(m => m.student_id === sid && m.activity_id === aid && m.content === content)) {
+    messages.push({ message_id: messages.length + 1, student_id: sid, activity_id: aid, content });
+  }
+}
+
+function createActivity() {
+  const title = document.getElementById("title").value.trim();
+  const capacity = Number(document.getElementById("capacity").value);
+  if (!title) { alert("活动名称不能为空"); return; }
+  if (!(capacity > 0)) { alert("人数上限必须为正整数"); return; }
+  activities.push({
+    activity_id: ++seq,
+    title,
+    category: document.getElementById("category").value,
+    location: document.getElementById("location").value,
+    capacity,
+    policy_type: document.getElementById("policy_type").value
+  });
+  render();
+}
+
+function registerSelected() {
+  if (!selectedActivity) { alert("请先选择活动"); return; }
+  const sid = document.getElementById("studentId").value.trim();
+  if (!sid) { alert("请输入学生ID"); return; }
+  const act = activities.find(a => a.activity_id === selectedActivity);
+  if (hasActive(act.activity_id, sid)) { alert("该活动已有有效报名，请勿重复报名"); return; }
+  const approved = approvedCount(act.activity_id);
+  let status;
+  if (act.policy_type === "DIRECT") {
+    if (approved >= act.capacity) { alert("名额不足"); return; }
+    status = "APPROVED";
+    pushMessage(sid, act.activity_id, `你报名的活动《${act.title}》已通过。`);
+  } else {
+    status = "PENDING";
+    pushMessage(sid, act.activity_id, `你报名的活动《${act.title}》已提交，等待管理员审核。`);
+  }
+  registrations.push({ registration_id: ++seq, activity_id: act.activity_id, student_id: sid, status });
+  render();
+}
+
+function review(id, approve) {
+  const r = registrations.find(x => x.registration_id === id);
+  if (!r || r.status !== "PENDING") return;
+  const act = activities.find(a => a.activity_id === r.activity_id);
+  const approved = approvedCount(act.activity_id);
+  if (approve && approved >= act.capacity) { alert("名额已满，批准失败"); return; }
+  r.status = approve ? "APPROVED" : "REJECTED";
+  pushMessage(r.student_id, act.activity_id, approve
+    ? `你的报名《${act.title}》已被管理员批准。`
+    : `你的报名《${act.title}》未通过审核。`);
+  render();
+}
+
+function cancelReg(id) {
+  const r = registrations.find(x => x.registration_id === id);
+  if (!r || !["PENDING", "APPROVED"].includes(r.status)) return;
+  const act = activities.find(a => a.activity_id === r.activity_id);
+  r.status = "CANCELLED";
+  pushMessage(r.student_id, act.activity_id, `你已取消活动《${act.title}》的报名。`);
+  render();
+}
+
+function selectActivity(id) { selectedActivity = id; alert("已选择活动 " + id); }
+
+function render() {
+  const keyword = document.getElementById("keyword").value.trim();
+  const list = activities.filter(a => !keyword || a.title.includes(keyword));
+  const body = document.getElementById("activityBody");
+  body.innerHTML = "";
+  list.forEach(a => {
+    const approved = approvedCount(a.activity_id);
+    const remaining = Math.max(a.capacity - approved, 0);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${a.activity_id}</td><td>${a.title}</td><td>${a.policy_type === "DIRECT" ? "直接报名" : "审核型"}</td>
+      <td>${a.location || ""}</td><td>${approved}</td><td>${pendingCount(a.activity_id)}</td><td>${remaining}</td>
+      <td><button onclick="selectActivity(${a.activity_id})">选择</button></td>`;
+    body.appendChild(tr);
+  });
+  const rb = document.getElementById("registrationBody");
+  rb.innerHTML = "";
+  registrations.forEach(r => {
+    const tag = r.status.toLowerCase();
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.registration_id}</td><td>${r.activity_id}</td><td>${r.student_id}</td>
+      <td><span class="tag ${tag}">${r.status}</span></td>
+      <td>${r.status === "PENDING"
+        ? `<button onclick="review(${r.registration_id}, true)">批准</button><button class="secondary" onclick="review(${r.registration_id}, false)">拒绝</button>`
+        : `<button class="secondary" onclick="cancelReg(${r.registration_id})">取消</button>`}</td>`;
+    rb.appendChild(tr);
+  });
+}
+
+function loadMessages() {
+  const sid = document.getElementById("studentId").value.trim();
+  const list = messages.filter(m => m.student_id === sid);
+  document.getElementById("messageBox").innerHTML = list.length
+    ? list.map(m => `· ${m.content}`).join("<br>")
+    : "暂无消息";
+}
+
+render();
+</script>
+</body>
+</html>
