@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusEvent 校园活动报名与管理系统</title>
+  <style>
+    body { font-family: -apple-system, "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #1f2329; }
+    header { background: #2b579a; color: #fff; padding: 16px 24px; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    section { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    h2 { margin-top: 0; font-size: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border-bottom: 1px solid #e5e6eb; padding: 8px 10px; font-size: 14px; text-align: left; }
+    input, select, button { padding: 7px 10px; font-size: 14px; border: 1px solid #d0d3d9; border-radius: 6px; }
+    button { background: #2b579a; color: #fff; border: none; cursor: pointer; margin-right: 6px; }
+    button.secondary { background: #6b7280; }
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .tag { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .pending { background: #fff7e6; color: #d46b08; }
+    .approved { background: #e6f7ec; color: #16773a; }
+    .rejected, .cancelled { background: #f2f3f5; color: #646a73; }
+    .msg { color: #646a73; font-size: 13px; }
+  </style>
+</head>
+<body>
+<header><h1>CampusEvent 校园活动报名与管理系统</h1></header>
+<main>
+  <section>
+    <h2>新建活动（管理员）</h2>
+    <div class="form-row">
+      <input id="title" placeholder="活动名称">
+      <input id="category" placeholder="类别">
+      <input id="location" placeholder="地点">
+      <input id="capacity" type="number" placeholder="人数上限" min="1">
+      <select id="policy_type">
+        <option value="DIRECT">直接报名</option>
+        <option value="REVIEW">管理员审核</option>
+      </select>
+      <button onclick="createActivity()">创建活动</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>活动列表</h2>
+    <div class="form-row">
+      <input id="keyword" placeholder="按名称筛选">
+      <button onclick="loadActivities()">查询</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>名称</th><th>方式</th><th>地点</th><th>已通过</th><th>待审核</th><th>剩余名额</th><th>操作</th></tr></thead>
+      <tbody id="activityBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>报名 / 审批操作</h2>
+    <div class="form-row">
+      <input id="studentId" placeholder="学生ID，如 s001">
+      <button onclick="registerSelected()">报名选中活动</button>
+      <button class="secondary" onclick="loadMessages()">查看我的站内消息</button>
+    </div>
+    <table>
+      <thead><tr><th>报名ID</th><th>活动ID</th><th>学生</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="registrationBody"></tbody>
+    </table>
+    <div id="messageBox" class="msg"></div>
+  </section>
+</main>
+
+<script>
+let selectedActivity = null;
+
+async function loadActivities() {
+  const keyword = document.getElementById('keyword').value;
+  const res = await fetch('/api/activities?keyword=' + encodeURIComponent(keyword));
+  const data = await res.json();
+  const body = document.getElementById('activityBody');
+  body.innerHTML = '';
+  data.forEach(a => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${a.activity_id}</td><td>${a.title}</td><td>${a.policy_type === 'DIRECT' ? '直接报名' : '审核型'}</td>
+      <td>${a.location || ''}</td><td>${a.stats.approved}</td><td>${a.stats.pending}</td><td>${a.stats.remaining}</td>
+      <td><button onclick="selectActivity(${a.activity_id})">选择</button></td>`;
+    body.appendChild(tr);
+  });
+  loadRegistrations();
+}
+
+function selectActivity(id) {
+  selectedActivity = id;
+  alert('已选择活动 ' + id);
+}
+
+async function createActivity() {
+  const payload = {
+    title: document.getElementById('title').value,
+    category: document.getElementById('category').value,
+    location: document.getElementById('location').value,
+    capacity: Number(document.getElementById('capacity').value),
+    policy_type: document.getElementById('policy_type').value
+  };
+  const res = await fetch('/api/activities', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (res.ok) { loadActivities(); } else { alert(data.error); }
+}
+
+async function registerSelected() {
+  if (!selectedActivity) { alert('请先选择活动'); return; }
+  const studentId = document.getElementById('studentId').value;
+  const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ activity_id: selectedActivity, student_id: studentId }) });
+  const data = await res.json();
+  alert(res.ok ? ('报名状态：' + data.status) : data.error);
+  loadActivities();
+}
+
+async function loadRegistrations() {
+  const res = await fetch('/api/activities');
+  const activities = await res.json();
+  const ids = activities.map(a => a.activity_id);
+  let all = [];
+  for (const id of ids) {
+    const r = await fetch('/api/activities/' + id);
+    const detail = await r.json();
+    all = all.concat(detail.registrations || []);
+  }
+  const body = document.getElementById('registrationBody');
+  body.innerHTML = '';
+  all.forEach(r => {
+    const tr = document.createElement('tr');
+    const tagClass = r.status.toLowerCase();
+    tr.innerHTML = `<td>${r.registration_id}</td><td>${r.activity_id}</td><td>${r.student_id}</td>
+      <td><span class="tag ${tagClass}">${r.status}</span></td>
+      <td>${r.status === 'PENDING'
+        ? `<button onclick="review(${r.registration_id}, true)">批准</button><button class="secondary" onclick="review(${r.registration_id}, false)">拒绝</button>`
+        : `<button class="secondary" onclick="cancelReg(${r.registration_id})">取消</button>`}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+async function review(id, approve) {
+  const res = await fetch(`/api/registrations/${id}/review`, { method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ approve }) });
+  const data = await res.json();
+  alert(res.ok ? ('状态：' + data.status) : data.error);
+  loadActivities();
+}
+
+async function cancelReg(id) {
+  const res = await fetch(`/api/registrations/${id}/cancel`, { method: 'POST' });
+  const data = await res.json();
+  alert(res.ok ? ('状态：' + data.status) : data.error);
+  loadActivities();
+}
+
+async function loadMessages() {
+  const studentId = document.getElementById('studentId').value;
+  const res = await fetch('/api/messages/' + encodeURIComponent(studentId));
+  const data = await res.json();
+  document.getElementById('messageBox').innerHTML = data.map(m => `· ${m.content}`).join('<br>') || '暂无消息';
+}
+
+loadActivities();
+</script>
+</body>
+</html>
