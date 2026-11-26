@@ -4,15 +4,25 @@ from .database import get_db
 from .policies.factory import get_policy
 from .observers.dispatcher import EventDispatcher
 from .observers.message_observer import MessageObserver
+from .observers.mail_sender import MockEmailSender
+from .observers.mail_observer import MailObserver
 
 VALID_STATUS = {"PENDING", "APPROVED", "REJECTED", "CANCELLED"}
 ACTIVE_STATUS = {"PENDING", "APPROVED"}
+VALID_POLICIES = ("DIRECT", "REVIEW", "GRADE_DIRECT")
 
 
 class RegistrationService:
-    def __init__(self):
+    def __init__(self, mail_sender=None):
         self.dispatcher = EventDispatcher()
+        self.mail_sender = mail_sender or MockEmailSender()
+        self.mail_observer = MailObserver(self.mail_sender)
         self.dispatcher.subscribe(MessageObserver())
+        self.dispatcher.subscribe(self.mail_observer)
+
+    def set_mail_sender(self, mail_sender):
+        self.mail_sender = mail_sender
+        self.mail_observer.mail_sender = mail_sender
 
     # ---------- 活动管理 ----------
     def create_activity(self, title, category, start_at, location, capacity, policy_type):
@@ -21,7 +31,7 @@ class RegistrationService:
         capacity = int(capacity)
         if capacity <= 0:
             raise ValueError("人数上限必须为正整数")
-        if policy_type not in ("DIRECT", "REVIEW"):
+        if policy_type not in VALID_POLICIES:
             raise ValueError("报名方式无效")
         db = get_db()
         cur = db.execute(
@@ -47,6 +57,10 @@ class RegistrationService:
         row = get_db().execute("SELECT * FROM activity WHERE activity_id = ?", (activity_id,)).fetchone()
         return dict(row) if row else None
 
+    def _get_student(self, db, student_id):
+        row = db.execute("SELECT * FROM student WHERE student_id = ?", (student_id,)).fetchone()
+        return dict(row) if row else None
+
     # ---------- 报名 ----------
     def _approved_count(self, db, activity_id):
         row = db.execute(
@@ -62,7 +76,7 @@ class RegistrationService:
         ).fetchone()
         return row is not None
 
-    def register(self, activity_id, student_id, student_name=None):
+    def register(self, activity_id, student_id, student_name=None, grade=None):
         db = get_db()
         activity = self.get_activity(activity_id)
         if not activity:
@@ -71,14 +85,23 @@ class RegistrationService:
         if self._has_active_registration(db, activity_id, student_id):
             raise ValueError("该活动已有有效报名，请勿重复报名")
 
+        student = self._get_student(db, student_id)
+        if student is None:
+            if grade is not None and not (1 <= int(grade) <= 4):
+                raise ValueError("年级必须为 1—4")
+            db.execute(
+                "INSERT OR IGNORE INTO student (student_id, name, grade) VALUES (?, ?, ?)",
+                (student_id, student_name or student_id, grade),
+            )
+            student = self._get_student(db, student_id)
+        elif grade is not None:
+            db.execute("UPDATE student SET grade = ? WHERE student_id = ?", (grade, student_id))
+            student["grade"] = grade
+
         policy = get_policy(activity["policy_type"])
         approved_count = self._approved_count(db, activity_id)
-        status = policy.initial_status(activity, approved_count)
+        status = policy.initial_status(activity, approved_count, student)
 
-        db.execute(
-            "INSERT OR IGNORE INTO student (student_id, name) VALUES (?, ?)",
-            (student_id, student_name or student_id),
-        )
         cur = db.execute(
             "INSERT INTO registration (activity_id, student_id, status) VALUES (?, ?, ?)",
             (activity_id, student_id, status),
@@ -104,10 +127,11 @@ class RegistrationService:
             raise ValueError("仅待审核记录可审批")
 
         activity = self.get_activity(row["activity_id"])
+        student = self._get_student(db, row["student_id"])
         policy = get_policy(activity["policy_type"])
         approved_count = self._approved_count(db, row["activity_id"])
 
-        if approve and not policy.can_approve(activity, approved_count):
+        if approve and not policy.can_approve(activity, approved_count, student):
             raise ValueError("名额已满，批准失败")
 
         new_status = "APPROVED" if approve else "REJECTED"
@@ -172,6 +196,14 @@ class RegistrationService:
             "SELECT * FROM message WHERE student_id = ? ORDER BY message_id DESC",
             (student_id,),
         ).fetchall()
+        return [dict(r) for r in rows]
+
+    def list_mail_logs(self, student_id=None):
+        db = get_db()
+        if student_id is not None:
+            rows = db.execute("SELECT * FROM mail_log WHERE student_id = ? ORDER BY mail_id DESC", (student_id,)).fetchall()
+        else:
+            rows = db.execute("SELECT * FROM mail_log ORDER BY mail_id DESC").fetchall()
         return [dict(r) for r in rows]
 
     def list_registrations(self, activity_id=None):

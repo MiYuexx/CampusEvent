@@ -6,10 +6,10 @@ class DirectPolicy(RegistrationPolicy):
 
     code = "DIRECT"
 
-    def initial_status(self, activity, approved_count):
+    def initial_status(self, activity, approved_count, student=None):
         if approved_count >= activity["capacity"]:
             raise ValueError("名额不足")
         return "APPROVED"
 
-    def can_approve(self, activity, approved_count):
+    def can_approve(self, activity, approved_count, student=None):
         return approved_count < activity["capacity"]

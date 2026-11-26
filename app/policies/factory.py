@@ -1,9 +1,11 @@
 from .direct import DirectPolicy
 from .review import ReviewPolicy
+from .grade_direct import GradeDirectPolicy
 
 _POLICIES = {
     DirectPolicy.code: DirectPolicy(),
     ReviewPolicy.code: ReviewPolicy(),
+    GradeDirectPolicy.code: GradeDirectPolicy(),
 }
 
 

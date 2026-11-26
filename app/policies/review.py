@@ -6,8 +6,8 @@ class ReviewPolicy(RegistrationPolicy):
 
     code = "REVIEW"
 
-    def initial_status(self, activity, approved_count):
+    def initial_status(self, activity, approved_count, student=None):
         return "PENDING"
 
-    def can_approve(self, activity, approved_count):
+    def can_approve(self, activity, approved_count, student=None):
         return approved_count < activity["capacity"]
