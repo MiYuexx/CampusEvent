@@ -77,5 +77,5 @@
 ## 八、交付信息
 
 - 代码仓库：`https://github.com/MiYuexx/CampusEvent`
-- 项目 Web 地址：`<公网可访问地址，部署后填写；不能填 127.0.0.1>`
+- 项目 Web 地址：`https://miyuexx.github.io/CampusEvent/`
 - 启动与测试命令：见 `README.md`

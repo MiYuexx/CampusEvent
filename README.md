@@ -72,15 +72,15 @@ CampusEvent/
 
 ## 六、部署说明（公网 Web 地址）
 
-本项目为 Flask 后端应用，公网部署可任选其一：
-
-1. 云服务器：将代码上传至云服务器，安装依赖后用 gunicorn/uwsgi 配合 Nginx 对外提供服务，Web 地址形如 `http://<服务器公网IP>:5000` 或绑定域名。
-2. 平台托管：使用支持 Python 后端的 PaaS（如 Render、Railway、阿里云/腾讯云应用托管等），连接本仓库后按 `requirements.txt` 安装依赖、启动命令 `flask --app app run --host 0.0.0.0 --port $PORT`。
+- **演示站点（GitHub Pages，公网可访问）**：`https://miyuexx.github.io/CampusEvent/`
+  该页面为静态演示，报名/审批/通知流程在浏览器本地模拟；完整 Flask 后端源码、SQLite 持久化与 C1–C10 自动化测试见仓库 `app/`、`tests/` 目录。
+- **后端本地运行**：按上文「从零开始运行」启动 Flask，本机调试地址为 `http://127.0.0.1:5000`（仅本机回环，不能作为作业 Web 地址）。
+- **后端公网部署（可选）**：如需把 Flask 后端也部署到公网，可使用云服务器（gunicorn/uwsgi + Nginx）或支持 Python 的 PaaS（Render、Railway 等），连接本仓库后按 `requirements.txt` 安装依赖，启动命令 `flask --app app run --host 0.0.0.0 --port $PORT`。
 
 > 提交作业时，在答案中填写：
 >
 > - 代码仓库：`https://github.com/MiYuexx/CampusEvent`
-> - 项目 Web 地址：`<公网可访问地址，部署后填写；不能填 127.0.0.1>`
+> - 项目 Web 地址：`https://miyuexx.github.io/CampusEvent/`
 
 ## 七、Git 版本标签
 
