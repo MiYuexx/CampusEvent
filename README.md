@@ -79,8 +79,8 @@ CampusEvent/
 
 > 提交作业时，在答案中填写：
 >
-> - 代码仓库：`<GitHub 仓库地址>`
-> - 项目 Web 地址：`<公网可访问地址>`
+> - 代码仓库：`https://github.com/MiYuexx/CampusEvent`
+> - 项目 Web 地址：`<公网可访问地址，部署后填写；不能填 127.0.0.1>`
 
 ## 七、Git 版本标签
 
