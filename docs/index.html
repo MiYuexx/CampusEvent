@@ -5,27 +5,119 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusEvent 校园活动报名与管理系统</title>
   <style>
-    body { font-family: -apple-system, "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #1f2329; }
-    header { background: #2b579a; color: #fff; padding: 16px 24px; }
-    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
-    section { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    h2 { margin-top: 0; font-size: 18px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border-bottom: 1px solid #e5e6eb; padding: 8px 10px; font-size: 14px; text-align: left; }
-    input, select, button { padding: 7px 10px; font-size: 14px; border: 1px solid #d0d3d9; border-radius: 6px; }
-    button { background: #2b579a; color: #fff; border: none; cursor: pointer; margin-right: 6px; }
-    button.secondary { background: #6b7280; }
+    :root {
+      --primary: #4f6df5;
+      --primary-dark: #3b55d9;
+      --bg: #eef1f9;
+      --card: #ffffff;
+      --text: #1f2329;
+      --muted: #7a8194;
+      --line: #e7eaf2;
+      --green: #16a34a;
+      --green-bg: #e8f7ee;
+      --orange: #d97706;
+      --orange-bg: #fef3e2;
+      --gray-bg: #f1f3f7;
+      --radius: 16px;
+      --shadow: 0 8px 24px rgba(79, 109, 245, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "Segoe UI", sans-serif;
+      margin: 0;
+      background:
+        radial-gradient(1200px 500px at 85% -10%, rgba(79,109,245,.18), transparent 60%),
+        radial-gradient(900px 400px at -10% 20%, rgba(124,92,246,.14), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(120deg, #4f6df5 0%, #7c5cf6 55%, #9b6df7 100%);
+      color: #fff;
+      padding: 30px 24px 42px;
+    }
+    .header-inner { max-width: 1000px; margin: 0 auto; }
+    header h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: .5px; }
+    header p { margin: 0; opacity: .88; font-size: 14px; }
+    main { max-width: 1000px; margin: -22px auto 40px; padding: 0 16px; }
+    section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.7);
+    }
+    h2 { margin: 0 0 16px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+    h2::before {
+      content: ""; width: 8px; height: 18px; border-radius: 6px;
+      background: linear-gradient(var(--primary), #7c5cf6);
+    }
     .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .tag { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-    .pending { background: #fff7e6; color: #d46b08; }
-    .approved { background: #e6f7ec; color: #16773a; }
-    .rejected, .cancelled { background: #f2f3f5; color: #646a73; }
-    .msg { color: #646a73; font-size: 13px; line-height: 1.8; }
-    .tip { font-size: 12px; color: #8a9099; margin-top: 8px; }
+    input, select, button {
+      padding: 10px 12px; font-size: 14px; border: 1px solid var(--line);
+      border-radius: 10px; background: #fff; color: var(--text); outline: none;
+      transition: border-color .15s, box-shadow .15s, transform .1s;
+    }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,109,245,.15); }
+    input { min-width: 130px; }
+    button {
+      background: var(--primary); color: #fff; border: none; cursor: pointer;
+      font-weight: 500; margin-right: 6px;
+    }
+    button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: #eef0f6; color: var(--text); }
+    button.secondary:hover { background: #e2e6f0; }
+    button.ghost { background: transparent; color: var(--primary); border: 1px solid #d6defc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { padding: 12px 10px; font-size: 14px; text-align: left; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 12.5px; letter-spacing: .3px; }
+    tbody tr { transition: background .12s; }
+    tbody tr:hover { background: #f7f9ff; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500;
+    }
+    .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .pending { background: var(--orange-bg); color: var(--orange); }
+    .approved { background: var(--green-bg); color: var(--green); }
+    .rejected, .cancelled { background: var(--gray-bg); color: var(--muted); }
+    .policy { font-size: 12.5px; color: var(--primary-dark); background: #eef1ff; padding: 3px 10px; border-radius: 8px; }
+    .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .stat-card { flex: 1; min-width: 120px; background: #f7f9ff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .stat-card .num { font-size: 22px; font-weight: 700; color: var(--primary-dark); }
+    .stat-card .label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .msg { color: var(--muted); font-size: 13px; line-height: 1.9; margin-top: 12px; }
+    .msg .item { background: #f7f9ff; border-left: 3px solid var(--primary); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+    .tip { font-size: 12px; color: var(--muted); margin-top: 12px; }
+    .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 13px; }
+    .toast {
+      position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+      background: #1f2329; color: #fff; padding: 10px 18px; border-radius: 10px;
+      font-size: 13.5px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 99;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .selected-row { background: #eef3ff !important; }
+    @media (max-width: 640px) {
+      header { padding: 22px 18px 36px; }
+      main { margin-top: -18px; }
+      section { padding: 16px; }
+      input { min-width: 100%; }
+      .form-row { flex-direction: column; align-items: stretch; }
+      button { margin-right: 0; }
+      th:nth-child(3), td:nth-child(3) { display: none; }
+    }
   </style>
 </head>
 <body>
-<header><h1>CampusEvent 校园活动报名与管理系统</h1></header>
+<header>
+  <div class="header-inner">
+    <h1>CampusEvent 校园活动报名与管理系统</h1>
+    <p>活动发布 · 在线报名 · 审核审批 · 站内通知，一站式校园活动管理演示</p>
+  </div>
+</header>
 <main>
   <section>
     <h2>新建活动（管理员）</h2>
@@ -46,9 +138,10 @@
   <section>
     <h2>活动列表</h2>
     <div class="form-row">
-      <input id="keyword" placeholder="按名称筛选">
-      <button onclick="render()">查询</button>
+      <input id="keyword" placeholder="按名称筛选" style="min-width:200px">
+      <button class="ghost" onclick="render()">查询</button>
     </div>
+    <div class="stats" id="globalStats"></div>
     <table>
       <thead><tr><th>ID</th><th>名称</th><th>方式</th><th>地点</th><th>已通过</th><th>待审核</th><th>剩余名额</th><th>操作</th></tr></thead>
       <tbody id="activityBody"></tbody>
@@ -69,6 +162,8 @@
     <div id="messageBox" class="msg"></div>
   </section>
 </main>
+
+<div id="toast" class="toast"></div>
 
 <script>
 let seq = 100;
@@ -94,12 +189,22 @@ function pushMessage(sid, aid, content) {
     messages.push({ message_id: messages.length + 1, student_id: sid, activity_id: aid, content });
   }
 }
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 1800);
+}
+function policyLabel(p) {
+  return p === "DIRECT" ? "直接报名" : p === "REVIEW" ? "审核型" : "年级限定";
+}
 
 function createActivity() {
   const title = document.getElementById("title").value.trim();
   const capacity = Number(document.getElementById("capacity").value);
-  if (!title) { alert("活动名称不能为空"); return; }
-  if (!(capacity > 0)) { alert("人数上限必须为正整数"); return; }
+  if (!title) { toast("活动名称不能为空"); return; }
+  if (!(capacity > 0)) { toast("人数上限必须为正整数"); return; }
   activities.push({
     activity_id: ++seq,
     title,
@@ -108,19 +213,20 @@ function createActivity() {
     capacity,
     policy_type: document.getElementById("policy_type").value
   });
+  toast("活动创建成功");
   render();
 }
 
 function registerSelected() {
-  if (!selectedActivity) { alert("请先选择活动"); return; }
+  if (!selectedActivity) { toast("请先选择活动"); return; }
   const sid = document.getElementById("studentId").value.trim();
-  if (!sid) { alert("请输入学生ID"); return; }
+  if (!sid) { toast("请输入学生ID"); return; }
   const act = activities.find(a => a.activity_id === selectedActivity);
-  if (hasActive(act.activity_id, sid)) { alert("该活动已有有效报名，请勿重复报名"); return; }
+  if (hasActive(act.activity_id, sid)) { toast("该活动已有有效报名，请勿重复报名"); return; }
   const approved = approvedCount(act.activity_id);
   let status;
   if (act.policy_type === "DIRECT") {
-    if (approved >= act.capacity) { alert("名额不足"); return; }
+    if (approved >= act.capacity) { toast("名额不足"); return; }
     status = "APPROVED";
     pushMessage(sid, act.activity_id, `你报名的活动《${act.title}》已通过。`);
   } else {
@@ -128,6 +234,7 @@ function registerSelected() {
     pushMessage(sid, act.activity_id, `你报名的活动《${act.title}》已提交，等待管理员审核。`);
   }
   registrations.push({ registration_id: ++seq, activity_id: act.activity_id, student_id: sid, status });
+  toast(status === "APPROVED" ? "报名已通过" : "报名已提交，等待审核");
   render();
 }
 
@@ -136,11 +243,12 @@ function review(id, approve) {
   if (!r || r.status !== "PENDING") return;
   const act = activities.find(a => a.activity_id === r.activity_id);
   const approved = approvedCount(act.activity_id);
-  if (approve && approved >= act.capacity) { alert("名额已满，批准失败"); return; }
+  if (approve && approved >= act.capacity) { toast("名额已满，批准失败"); return; }
   r.status = approve ? "APPROVED" : "REJECTED";
   pushMessage(r.student_id, act.activity_id, approve
     ? `你的报名《${act.title}》已被管理员批准。`
     : `你的报名《${act.title}》未通过审核。`);
+  toast(approve ? "已批准该报名" : "已拒绝该报名");
   render();
 }
 
@@ -150,27 +258,51 @@ function cancelReg(id) {
   const act = activities.find(a => a.activity_id === r.activity_id);
   r.status = "CANCELLED";
   pushMessage(r.student_id, act.activity_id, `你已取消活动《${act.title}》的报名。`);
+  toast("报名已取消");
   render();
 }
 
-function selectActivity(id) { selectedActivity = id; alert("已选择活动 " + id); }
+function selectActivity(id) {
+  selectedActivity = id;
+  toast("已选择活动 " + id);
+  render();
+}
+
+function renderStats() {
+  const total = activities.length;
+  const approved = registrations.filter(r => r.status === "APPROVED").length;
+  const pending = registrations.filter(r => r.status === "PENDING").length;
+  const el = document.getElementById("globalStats");
+  el.innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="label">活动总数</div></div>
+    <div class="stat-card"><div class="num">${approved}</div><div class="label">已通过报名</div></div>
+    <div class="stat-card"><div class="num">${pending}</div><div class="label">待审核报名</div></div>`;
+}
 
 function render() {
   const keyword = document.getElementById("keyword").value.trim();
   const list = activities.filter(a => !keyword || a.title.includes(keyword));
   const body = document.getElementById("activityBody");
   body.innerHTML = "";
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="8" class="empty">暂无匹配活动</td></tr>`;
+  }
   list.forEach(a => {
     const approved = approvedCount(a.activity_id);
     const remaining = Math.max(a.capacity - approved, 0);
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${a.activity_id}</td><td>${a.title}</td><td>${a.policy_type === "DIRECT" ? "直接报名" : "审核型"}</td>
-      <td>${a.location || ""}</td><td>${approved}</td><td>${pendingCount(a.activity_id)}</td><td>${remaining}</td>
-      <td><button onclick="selectActivity(${a.activity_id})">选择</button></td>`;
+    if (a.activity_id === selectedActivity) tr.className = "selected-row";
+    tr.innerHTML = `<td>${a.activity_id}</td><td>${a.title}</td>
+      <td><span class="policy">${policyLabel(a.policy_type)}</span></td>
+      <td>${a.location || "—"}</td><td>${approved}</td><td>${pendingCount(a.activity_id)}</td><td>${remaining}</td>
+      <td><button class="ghost" onclick="selectActivity(${a.activity_id})">选择</button></td>`;
     body.appendChild(tr);
   });
   const rb = document.getElementById("registrationBody");
   rb.innerHTML = "";
+  if (!registrations.length) {
+    rb.innerHTML = `<tr><td colspan="5" class="empty">暂无报名记录</td></tr>`;
+  }
   registrations.forEach(r => {
     const tag = r.status.toLowerCase();
     const tr = document.createElement("tr");
@@ -181,14 +313,15 @@ function render() {
         : `<button class="secondary" onclick="cancelReg(${r.registration_id})">取消</button>`}</td>`;
     rb.appendChild(tr);
   });
+  renderStats();
 }
 
 function loadMessages() {
   const sid = document.getElementById("studentId").value.trim();
   const list = messages.filter(m => m.student_id === sid);
   document.getElementById("messageBox").innerHTML = list.length
-    ? list.map(m => `· ${m.content}`).join("<br>")
-    : "暂无消息";
+    ? list.map(m => `<div class="item">· ${m.content}</div>`).join("")
+    : `<div class="empty">暂无消息</div>`;
 }
 
 render();
