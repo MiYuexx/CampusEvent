@@ -5,7 +5,8 @@ from flask import g
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS student (
     student_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    grade INTEGER CHECK (grade BETWEEN 1 AND 4)
 );
 
 CREATE TABLE IF NOT EXISTS activity (
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS activity (
     start_at TEXT,
     location TEXT,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
-    policy_type TEXT NOT NULL CHECK (policy_type IN ('DIRECT', 'REVIEW'))
+    policy_type TEXT NOT NULL CHECK (policy_type IN ('DIRECT', 'REVIEW', 'GRADE_DIRECT'))
 );
 
 CREATE TABLE IF NOT EXISTS registration (
@@ -37,7 +38,23 @@ CREATE TABLE IF NOT EXISTS message (
     is_read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS mail_log (
+    mail_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id TEXT NOT NULL,
+    activity_id INTEGER,
+    subject TEXT NOT NULL,
+    content TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('SENT', 'FAILED')),
+    error TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
+
+# 兼容旧库：若 student 表缺少 grade 列则补充
+_MIGRATIONS = [
+    ("student", "grade", "ALTER TABLE student ADD COLUMN grade INTEGER CHECK (grade BETWEEN 1 AND 4)"),
+]
 
 
 def get_db(app=None):
@@ -61,9 +78,17 @@ def close_db(error=None):
         db.close()
 
 
+def _migrate(db):
+    for table, column, sql in _MIGRATIONS:
+        cols = [r["name"] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
+        if column not in cols:
+            db.execute(sql)
+
+
 def init_db(app):
     with app.app_context():
         db = get_db(app)
         db.executescript(SCHEMA)
+        _migrate(db)
         db.commit()
     app.teardown_appcontext(close_db)

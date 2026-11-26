@@ -55,6 +55,7 @@ def register():
             activity_id=data.get("activity_id"),
             student_id=data.get("student_id"),
             student_name=data.get("student_name"),
+            grade=data.get("grade"),
         )
         return jsonify({"registration_id": registration_id, "status": status}), 201
     except ValueError as e:
@@ -83,3 +84,8 @@ def cancel(registration_id):
 @bp.route("/api/messages/<student_id>", methods=["GET"])
 def messages(student_id):
     return jsonify(service.list_messages(student_id))
+
+
+@bp.route("/api/mails/<student_id>", methods=["GET"])
+def mails(student_id):
+    return jsonify(service.list_mail_logs(student_id))

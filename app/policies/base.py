@@ -7,9 +7,9 @@ class RegistrationPolicy(ABC):
     code = ""
 
     @abstractmethod
-    def initial_status(self, activity, approved_count):
-        """提交报名时返回初始状态。"""
+    def initial_status(self, activity, approved_count, student=None):
+        """提交报名时返回初始状态；不满足规则时抛出 ValueError。"""
 
     @abstractmethod
-    def can_approve(self, activity, approved_count):
+    def can_approve(self, activity, approved_count, student=None):
         """审批时是否允许通过。"""
